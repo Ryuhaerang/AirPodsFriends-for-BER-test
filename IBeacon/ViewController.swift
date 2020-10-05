@@ -3,10 +3,21 @@ import UIKit
 import CoreBluetooth
 import CoreLocation
 
-class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralManagerDelegate {
-    var peripheralManager : CBPeripheralManager? //let uuid = UUID(uuidString: "086704EE-9611-4ACC-91DB-F983ABAC9153")
-    var centralManager: CBCentralManager!   // CoreBluetooth Central Manager
-    var peripherals = [CBPeripheral]()      // All peripherals in Central Manager
+class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralManagerDelegate, CBPeripheralDelegate {
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Do any additional setup after loading the view, typically from a nib.
+        print("viewDidLoad\n")
+        peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
+        centralManager = CBCentralManager(delegate:self, queue: nil)        // This will trigger centralManagerDidUpdateState
+    }
+    
+    
+    var peripheralManager = CBPeripheralManager()
+    var centralManager =  CBCentralManager()   // CoreBluetooth Central Manager
+    // var peripherals = [CBPeripheral]()      // All peripherals in Central Manager
+    var discoveredPeripheral:CBPeripheral?
     let uuid = UUID(uuidString: "6F3934B7-B904-0001-AFFA-11200E011907")
     // 07 19 01 0E 20 11 FA AF 01 00 04 B9 B7 34 39 6F
     // 07, 19: Length, 01, 0E20: Device Model, 11: UTP, FA: Battery Indication1, AF: Battery Indication 2, 01: Lid Open Count, 00: Device Color, 04, Encrypted Payload(16-byte)
@@ -19,20 +30,80 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     var msg = ""
     var index = 0
     var isSentLoopRequired = false
-
+    
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        print("Central Manager did update state")
+        var message = String()
+        var isPoweredOn = false
+        switch  (central.state){
+        case .poweredOn:
+            print("Bluetooth is powered on \n")
+            let serviceUUID = CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")
+            let options = [CBCentralManagerScanOptionAllowDuplicatesKey: true]
+            //self.centralManager.scanForPeripherals(withServices: [serviceUUID], options: options)
+            centralManager.scanForPeripherals(withServices: nil, options: options)
+            isPoweredOn = true
+            break
+        case .unknown:
+            message = "Bluetooth state is unknown \n"
+            break
+        case .resetting:
+            break
+        case .unsupported:
+            message = "Bluetooth is unsupported \n"
+            break
+        case .unauthorized:
+            message = "Bluetooth is unauthorized \n"
+            break
+        case .poweredOff:
+            message = "Bluetooth is powered off \n"
+            break
+        default:
+            break
+        }
+        if isPoweredOn == false{
+            let controller = UIAlertController(title: "Bluetooth unavailable", message: message, preferredStyle: .alert)
+            controller.addAction(UIAlertAction(title: "OK",
+                                               style: .default,
+                                               handler: nil))
+            present(controller, animated: true, completion: nil)
+        }
+    }
+    
+    
+   /*
+   private func centralManager(central:CBCentralManager, didDiscoverPeripheral peripheral: CBPeripheral, advertisementData:[NSObject : AnyObject]!,RSSI:NSNumber!){
+        */
+     private func centralManager(central:CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData:[String : Any]!,RSSI:NSNumber){
+        print("centralManager")
+        print(peripheral.name ?? "NONE");
+        
+        if(peripheral.identifier.uuidString == "6F3934B7-B904-0001-AFFA-11200E011907"){
+            outputText.text = peripheral.name
+            self.discoveredPeripheral=peripheral
+            print("PERIPHERAL NAME: \(peripheral.name ?? "NONE")\n")
+            print("UUID DESCRIPTION: \(peripheral.identifier.uuidString)\n")
+            print("IDENTIFIER: \(peripheral.identifier)\n")
+        }
+        
+    }
+    
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
+        print("peripheralManagerDidUpdateState\n")
         switch peripheral.state{
         case .poweredOn:
                 let serviceUUID = CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")
                 let service=CBMutableService(type: serviceUUID, primary: true)
-                self.peripheralManager?.add(service)
+            self.peripheralManager.add(service)
             
             default:
             break
-    }
+        }
     }
 
     func peripheralManagerDidStartAdvertising(_ peripheral: CBPeripheralManager, error: Error?) {
+        print("peripheralManagerDidStartAdversiting")
+        print(DispatchTime.now());
         if error == nil {
             
             if(isSentLoopRequired){
@@ -71,7 +142,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
                 if isSentLoopRequired==false{
                     // Terminate Advertising Automatically
                     sleep(1)
-                    peripheralManager?.stopAdvertising()
+                    peripheralManager.stopAdvertising()
                 }
             }
         } else {
@@ -79,62 +150,13 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
         }
     }
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        
-        peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
-        centralManager = CBCentralManager(delegate:self, queue: nil)        // This will trigger centralManagerDidUpdateState
-    }
     
     override func viewWillDisappear(_ animated: Bool) {
+        print("viewWillDisappear\n")
+        
         centralManager.stopScan()   // Stop scan to save battery when entering  background
         
-        peripherals.removeAll(keepingCapacity: false)   // Remove all peripherals from the array
-    }
-    
-    // MARK: CBCentralManagerDelegate
-    
-    func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        print("Central Manager did update state \n")
-        var message = String()
-        if central.state == .poweredOn {
-            print("Bluetooth is powered on \n")
-            let serviceUUID = CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")
-            let options = [CBCentralManagerScanOptionAllowDuplicatesKey: true]
-            self.centralManager.scanForPeripherals(withServices: [serviceUUID], options: options)
-        }else{
-        switch central.state{
-            case .unsupported:
-                message = "Bluetooth is unsupported \n"
-            case .unknown:
-                message = "Bluetooth state is unknown \n"
-            case .unauthorized:
-                message = "Bluetooth is unauthorized \n"
-            case .poweredOff:
-                message = "Bluetooth is powered off \n"
-            default:
-                break
-            }
-            let controller = UIAlertController(title: "Bluetooth unavailable", message: message, preferredStyle: .alert)
-            controller.addAction(UIAlertAction(title: "OK",
-                                               style: .default,
-                                               handler: nil))
-            present(controller, animated: true, completion: nil)
-        }
-        
-    }
-    
-    public func centralManager(central:CBCentralManager!, didDiscoverPeripheral peripheral: CBPeripheral!, advertisementData:[NSObject : AnyObject]!,RSSI:NSNumber!){
-        print("Peripheral discovered: \(String(describing: peripheral)) \n")
-        
-        peripherals.append(peripheral)  // Add the peripheral to the array to keep reference, otherwise the system will release it and further delegate methods won't be triggered (didConnect, didFail....)
-        showMessage()
-    }
-    
-    func showMessage(){
-        let p = peripherals[0]
-        outputText.text = p.identifier.uuidString
+        //peripheral.removeAll(keepingCapacity: false)   // Remove all peripherals from the array
     }
     
 
@@ -149,13 +171,13 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     // MARK: Broadcasting
     @IBAction func btnStopTouchUpInside(_ sender: Any) {
         sentText.text="";
-        peripheralManager!.stopAdvertising()
+        peripheralManager.stopAdvertising()
     }
     
     func sendMessage(message: String){
-        if peripheralManager!.isAdvertising{
+        if peripheralManager.isAdvertising{
             sleep(1)
-            peripheralManager?.stopAdvertising()
+            peripheralManager.stopAdvertising()
         }
         print("message is \(String(describing: message)) \n")
         let region = CLBeaconRegion(proximityUUID: self.uuid!,
@@ -164,7 +186,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
                                     identifier: self.identifier)
         let peripheralData = region.peripheralData(withMeasuredPower: nil)
         
-        peripheralManager!.startAdvertising( [CBAdvertisementDataLocalNameKey: message, CBAdvertisementDataServiceUUIDsKey:[CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")],])
+        peripheralManager.startAdvertising( [CBAdvertisementDataLocalNameKey: message, CBAdvertisementDataServiceUUIDsKey:[CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")],])
     }
     
     @IBAction func btnStartTouchUpInside(_ sender: Any) {
@@ -173,7 +195,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
         let encoded=inputText.text
         var slicedEncoded = String()
         if encoded!.count < 8 {
-            if peripheralManager!.state == .poweredOn {
+            if peripheralManager.state == .poweredOn {
                 sendMessage(message: encoded!)
             }
         }
@@ -182,41 +204,49 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
             isSentLoopRequired = true
             msg = encoded!
             index = 1
-            if peripheralManager!.state == .poweredOn {
+            if peripheralManager.state == .poweredOn {
                 sendMessage(message: encoded![0...7])
             }
             }
     }
     
     @IBAction func Startlistening(_ sender: Any) {
-        listen()
+        //listen()
+        centralManager.scanForPeripherals(withServices: nil, options: nil)
+        print("\nNow Scanning for PERIPHERALS!\n")
     }
+    
     @IBAction func Stoplistening(_ sender: Any) {
-        stopListening()
-    }
-    
-    // MARK: Listening
-    
-    public func listen()->Bool{
-        guard self.isCentralActive else{
-            NSLog("[WARNING] Peer is not active. Skip listening")
-            return false
-        }
-        if centralManager.state == .poweredOn{
-            print("centralManager is successfully powered on \n")
-            let serviceUUID = CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")
-            let options = [CBCentralManagerScanOptionAllowDuplicatesKey: true]
-            self.centralManager.scanForPeripherals(withServices: [serviceUUID], options: options)
-            print("centralManager successfully scans peripherals")
-        }
-        return true
-    }
-    
-    public func stopListening(){
         self.centralManager.stopScan()
-        // peripherals.removeAll()
+        print("Stop Scanning for PERIPHERALS\n")
     }
     
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+            if error != nil {
+                if let error = error {
+                    print("Scan service error, error reason:\(error)")
+                }
+            } else {
+                for service in peripheral.services ?? [] {
+                    peripheral.discoverCharacteristics(nil, for: service)
+                }
+            }
+        }
+    
+    private func peripheral(peripheral: CBPeripheral!, didUpdateValueForCharacteristic characteristic: CBCharacteristic!,
+           error: NSError!) {
+        print("peripheral 1")
+               
+        print("\nCharacteristic \(characteristic.description) isNotifying: \(characteristic.isNotifying)\n")
+               
+       }
+    func peripheral(peripheral: CBPeripheral!, didUpdateNotificationStateForCharacteristic characteristic: CBCharacteristic!, error: NSError!) {
+        print("peripheral 2")
+            if( characteristic.isNotifying )
+            {
+                peripheral.readValue(for: characteristic)
+            }
+        }
 }
 
 
