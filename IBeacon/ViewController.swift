@@ -25,12 +25,16 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     let major: CLBeaconMajorValue = 1
     let minor: CLBeaconMinorValue = 0
     
+    private(set) var isRunning = false
+    
     var isCentralActive = false
     
     var msg = ""
+    var prevMsg = ""
+    
     var index = 0
     var isSentLoopRequired = false
-    
+        
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         print("Central Manager did update state")
         var message = String()
@@ -41,7 +45,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
             let serviceUUID = CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")
             let options = [CBCentralManagerScanOptionAllowDuplicatesKey: true]
             //self.centralManager.scanForPeripherals(withServices: [serviceUUID], options: options)
-            centralManager.scanForPeripherals(withServices: nil, options: options)
+            centralManager.scanForPeripherals(withServices: [serviceUUID], options: options)
             isPoweredOn = true
             break
         case .unknown:
@@ -71,22 +75,57 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     }
     
     
-   /*
-   private func centralManager(central:CBCentralManager, didDiscoverPeripheral peripheral: CBPeripheral, advertisementData:[NSObject : AnyObject]!,RSSI:NSNumber!){
-        */
-     private func centralManager(central:CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData:[String : Any]!,RSSI:NSNumber){
+    func centralManager(_ central:CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData:[String : Any],rssi RSSI:NSNumber){
         print("centralManager")
         print(peripheral.name ?? "NONE");
-        
+
+        if peripheral.name != prevMsg && peripheral.name != "NONE"{
+            msg = msg + peripheral.name!
+            outputText.text = msg
+            prevMsg = peripheral.name!
+            //print("msg: \(msg)")
+        }
+            
+        /*
         if(peripheral.identifier.uuidString == "6F3934B7-B904-0001-AFFA-11200E011907"){
             outputText.text = peripheral.name
-            self.discoveredPeripheral=peripheral
             print("PERIPHERAL NAME: \(peripheral.name ?? "NONE")\n")
             print("UUID DESCRIPTION: \(peripheral.identifier.uuidString)\n")
             print("IDENTIFIER: \(peripheral.identifier)\n")
         }
-        
+        */
     }
+    
+    
+    func startScanningForPeripherals(){
+        if centralManager.state != CBManagerState.poweredOn {
+            print("here")
+            return
+        }
+        let serviceUUID = CBUUID(string: "6F3934B7-B904-0001-AFFA-11200E011907")
+        centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
+        print("is scanning: \(centralManager.isScanning)")
+    }
+    
+    func startListening() {
+        if isRunning {
+            print("already listening")
+            return
+        }
+        isRunning = true
+        print("listening started.")
+        startScanningForPeripherals()
+    }
+    
+    func stopListening() {
+        if !isRunning{
+            print("already stopped listening")
+            return
+        }
+        isRunning = false
+        centralManager.stopScan()
+    }
+
     
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
         print("peripheralManagerDidUpdateState\n")
@@ -171,6 +210,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     // MARK: Broadcasting
     @IBAction func btnStopTouchUpInside(_ sender: Any) {
         sentText.text="";
+        inputText.text = "";
         peripheralManager.stopAdvertising()
     }
     
@@ -211,14 +251,13 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     }
     
     @IBAction func Startlistening(_ sender: Any) {
-        //listen()
-        centralManager.scanForPeripherals(withServices: nil, options: nil)
-        print("\nNow Scanning for PERIPHERALS!\n")
+        outputText.text = ""
+        msg = ""
+        startListening()
     }
     
     @IBAction func Stoplistening(_ sender: Any) {
-        self.centralManager.stopScan()
-        print("Stop Scanning for PERIPHERALS\n")
+        stopListening()
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
@@ -247,6 +286,11 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
                 peripheral.readValue(for: characteristic)
             }
         }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?){
+         self.view.endEditing(true)
+    }
+
 }
 
 
