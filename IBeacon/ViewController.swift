@@ -77,12 +77,12 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     
     func centralManager(_ central:CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData:[String : Any],rssi RSSI:NSNumber){
         print("centralManager")
-        print(peripheral.name ?? "NONE");
-
-        if peripheral.name != prevMsg && peripheral.name != "NONE"{
-            msg = msg + peripheral.name!
+        let name = peripheral.name ?? "NONE"
+        print(name);
+        if peripheral.name != prevMsg && name != "NONE"{
+            msg = msg + name
             outputText.text = msg
-            prevMsg = peripheral.name!
+            prevMsg = name
             //print("msg: \(msg)")
         }
             
