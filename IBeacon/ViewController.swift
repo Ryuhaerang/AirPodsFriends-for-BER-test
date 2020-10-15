@@ -258,7 +258,12 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
 
                 if isSentLoopRequired==false{
                     // Terminate Advertising Automatically
-                    sleep(1)
+                    //sleep(1)
+                    //usleep(500000) // 0.5 seconds
+                    //usleep(200000) // 0.2 seconds
+                    //usleep(100000) // 0.1 seconds
+                    usleep(50000) // 0.05 seconds
+                    
                     peripheralManager.stopAdvertising()
                 }
             }
@@ -294,7 +299,11 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     
     func sendMessage(message: String){
         if peripheralManager.isAdvertising{
-            sleep(1)
+            // sleep(1)
+            //usleep(500000) // 0.5 seconds
+            //usleep(200000) // 0.2 seconds
+            //usleep(100000) // 0.1 seconds
+            usleep(50000) // 0.05 seconds
             peripheralManager.stopAdvertising()
         }
         // print("message is \(String(describing: message)) \n")
