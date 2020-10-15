@@ -14,6 +14,8 @@
 		30F986BD2126CCAA008E374E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 30F986BB2126CCAA008E374E /* LaunchScreen.storyboard */; };
 		30F986C82126CCAA008E374E /* IBeaconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30F986C72126CCAA008E374E /* IBeaconTests.swift */; };
 		30F986D32126CCAA008E374E /* IBeaconUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30F986D22126CCAA008E374E /* IBeaconUITests.swift */; };
+		3BE995C025358E9C001B6AA5 /* TheLittlePrince.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3BE995BF25358E9C001B6AA5 /* TheLittlePrince.txt */; };
+		3BE995D02535CA04001B6AA5 /* TheLittlePrince_4KB.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3BE995CF2535CA04001B6AA5 /* TheLittlePrince_4KB.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +49,8 @@
 		30F986CE2126CCAA008E374E /* IBeaconUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IBeaconUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		30F986D22126CCAA008E374E /* IBeaconUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IBeaconUITests.swift; sourceTree = "<group>"; };
 		30F986D42126CCAA008E374E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		3BE995BF25358E9C001B6AA5 /* TheLittlePrince.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TheLittlePrince.txt; sourceTree = "<group>"; };
+		3BE995CF2535CA04001B6AA5 /* TheLittlePrince_4KB.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TheLittlePrince_4KB.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,8 +103,10 @@
 			children = (
 				30F986B22126CCA9008E374E /* AppDelegate.swift */,
 				30F986B42126CCA9008E374E /* ViewController.swift */,
+				3BE995BF25358E9C001B6AA5 /* TheLittlePrince.txt */,
 				30F986B62126CCA9008E374E /* Main.storyboard */,
 				30F986B92126CCAA008E374E /* Assets.xcassets */,
+				3BE995CF2535CA04001B6AA5 /* TheLittlePrince_4KB.txt */,
 				30F986BB2126CCAA008E374E /* LaunchScreen.storyboard */,
 				30F986BE2126CCAA008E374E /* Info.plist */,
 			);
@@ -235,8 +241,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				30F986BD2126CCAA008E374E /* LaunchScreen.storyboard in Resources */,
+				3BE995C025358E9C001B6AA5 /* TheLittlePrince.txt in Resources */,
 				30F986BA2126CCAA008E374E /* Assets.xcassets in Resources */,
 				30F986B82126CCA9008E374E /* Main.storyboard in Resources */,
+				3BE995D02535CA04001B6AA5 /* TheLittlePrince_4KB.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

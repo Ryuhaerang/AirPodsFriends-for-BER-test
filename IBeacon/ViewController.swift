@@ -3,6 +3,7 @@ import UIKit
 import CoreBluetooth
 import CoreLocation
 
+@available(iOS 13, *)
 class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralManagerDelegate, CBPeripheralDelegate {
     
     override func viewDidLoad() {
@@ -11,6 +12,17 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
         print("viewDidLoad\n")
         peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
         centralManager = CBCentralManager(delegate:self, queue: nil)        // This will trigger centralManagerDidUpdateState
+        // let filePath = Bundle.main.path(forResource: "TheLittlePrince", ofType: "txt");
+        let filePath = Bundle.main.path(forResource: "TheLittlePrince_4KB", ofType: "txt");
+        let URL = NSURL.fileURL(withPath: filePath!)
+        do {
+            let string = try String.init(contentsOf: URL)
+            fileContents = string
+            // print("read: " + string)
+        } catch  {
+            print(error);
+        }
+        
     }
     
     
@@ -25,16 +37,24 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     let major: CLBeaconMajorValue = 1
     let minor: CLBeaconMinorValue = 0
     
+    var startTime = DispatchTime.now()
+    var endTime = DispatchTime.now()
+    
     private(set) var isRunning = false
     
     var isCentralActive = false
     
     var msg = ""
     var prevMsg = ""
+    var sentmsg = ""
     
     var index = 0
     var isSentLoopRequired = false
-        
+    
+    var fileContents = ""
+    var lostPacketNum = 0
+    var ber = 0
+    
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         print("Central Manager did update state")
         var message = String()
@@ -76,9 +96,12 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     
     
     func centralManager(_ central:CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData:[String : Any],rssi RSSI:NSNumber){
-        print("centralManager")
+        // print("centralManager")
+        //print("...receiving")
         let name = peripheral.name ?? "NONE"
-        print(name);
+        if name != "NONE"{
+            print(name);
+        }
         if peripheral.name != prevMsg && name != "NONE"{
             msg = msg + name
             outputText.text = msg
@@ -124,8 +147,60 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
         }
         isRunning = false
         centralManager.stopScan()
+        PacketLoss()
+        BER()
+        let message = "The number of lost packets is: \(String(describing: lostPacketNum)), and BER is: \(String(describing: ber)), and the length of recieved msg is \(String(describing: msg.count))"
+        let controller = UIAlertController(title: "Packet Loss and BER", message: message,
+                                           preferredStyle: .alert)
+        controller.addAction(UIAlertAction(title: "OK",
+                                           style: .default,
+                                           handler: nil))
+        present(controller, animated: true, completion: nil)
     }
-
+    
+    func PacketLoss(){
+        var indexM = 0
+        var indexC = 0
+        lostPacketNum = 0
+        while(indexM < msg.count){
+            var lastOffset = 0
+            if (indexM+8>msg.count){
+                lastOffset = msg.count - indexM
+            }else{
+                lastOffset = 8
+            }
+            
+            var rChunk = msg[msg.index(msg.startIndex, offsetBy: indexM)..<msg.index(msg.startIndex, offsetBy: indexM+lastOffset)]
+            var cChunk = fileContents[fileContents.index(fileContents.startIndex, offsetBy: indexC)..<fileContents.index(fileContents.startIndex, offsetBy: indexC+lastOffset)]
+            let isEqual = (rChunk == cChunk)
+            if (isEqual){
+                indexM += 8;
+                indexC += 8;
+                /*
+                print(rChunk)
+                print(cChunk)
+                print("=====================")
+                */
+            }else{
+                if (indexC + 8 < fileContents.count){
+                    indexC += 8;
+                }
+                lostPacketNum+=1
+            }
+        }
+        print("Packet Loss: ")
+        print(lostPacketNum)
+    }
+    
+    func BER(){
+        let difference = msg.difference(from: fileContents)
+        print("BER")
+        print(difference)   // 504-2047
+        print("========")
+        print(msg)
+        print("========")
+        print(fileContents)
+    }
     
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
         print("peripheralManagerDidUpdateState\n")
@@ -144,10 +219,9 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
         print("peripheralManagerDidStartAdversiting")
         print(DispatchTime.now());
         if error == nil {
-            
             if(isSentLoopRequired){
                 var slicedEncoded=""
-                if msg.count>=(index+1)*8-1{
+                if msg.count>(index+1)*8-1{
                     let range = index*8...(index+1)*8-1
                     slicedEncoded = msg[range]
                     if msg.count-1<(index+1)*8{
@@ -165,13 +239,17 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
                     isSentLoopRequired = false
                     index = 0
                 }
+                sentmsg += slicedEncoded
                 sendMessage(message: slicedEncoded)
                 
             }else{
+                endTime = DispatchTime.now()
                 print("Successfully started advertising our beacon data.")
-                let message = "Successfully set up your beacon. " +
-                "The unique identifier of our service is: \(String(describing: uuid?.uuidString)), and the sent data is: \(String(describing: inputText.text))"
-                let controller = UIAlertController(title: "Airpods Friend", message: message,
+                //let message = "Successfully set up your beacon. " +
+                //"The unique identifier of our service is: \(String(describing: uuid?.uuidString)), and the sent data is: \(String(describing: inputText.text))"
+                let message = "Sent data length is : \(String(describing: sentmsg.count)), elapsed time is : \(String(describing: (Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds))/1_000_000_000))"
+                
+                let controller = UIAlertController(title: "Send message successfully", message: message,
                                                    preferredStyle: .alert)
                 controller.addAction(UIAlertAction(title: "OK",
                                                    style: .default,
@@ -219,7 +297,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
             sleep(1)
             peripheralManager.stopAdvertising()
         }
-        print("message is \(String(describing: message)) \n")
+        // print("message is \(String(describing: message)) \n")
         let region = CLBeaconRegion(proximityUUID: self.uuid!,
                                     major: self.major,
                                     minor: self.minor,
@@ -231,21 +309,24 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     
     @IBAction func btnStartTouchUpInside(_ sender: Any) {
         sentText.text = inputText.text
-
-        let encoded=inputText.text
+        startTime = DispatchTime.now()
+        
+        // let encoded=inputText.text
+        let encoded = fileContents
         var slicedEncoded = String()
-        if encoded!.count < 8 {
+        if encoded.count < 8 {
             if peripheralManager.state == .poweredOn {
-                sendMessage(message: encoded!)
+                sendMessage(message: encoded)
             }
         }
         else{
             // 8글자씩 index update하기
             isSentLoopRequired = true
-            msg = encoded!
+            msg = encoded
             index = 1
             if peripheralManager.state == .poweredOn {
-                sendMessage(message: encoded![0...7])
+                sendMessage(message: encoded[0...7])
+                sentmsg += encoded[0...7]
             }
             }
     }
@@ -253,6 +334,8 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate, CBCentralMa
     @IBAction func Startlistening(_ sender: Any) {
         outputText.text = ""
         msg = ""
+        lostPacketNum = 0
+        ber = 0
         startListening()
     }
     
@@ -305,5 +388,13 @@ extension String {
         let start = index(startIndex, offsetBy: bounds.lowerBound)
         let end = index(startIndex, offsetBy: bounds.upperBound)
         return String(self[start..<end])
+    }
+}
+
+extension Array where Element: Hashable {
+    func difference(from other: [Element]) -> [Element] {
+        let thisSet = Set(self)
+        let otherSet = Set(other)
+        return Array(thisSet.symmetricDifference(otherSet))
     }
 }

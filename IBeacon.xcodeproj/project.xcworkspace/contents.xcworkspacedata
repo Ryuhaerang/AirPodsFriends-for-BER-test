@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:IBeacon.xcodeproj">
+      location = "group:/Users/ryuhaerangchoi/git/AirpodsFriends_for_BER_test/IBeacon/TheLittlePrince_8KB.txt">
+   </FileRef>
+   <FileRef
+      location = "self:">
    </FileRef>
 </Workspace>
